@@ -18,12 +18,12 @@
     display: inline-block;
 }
 
-.snake {
-    background: green !important;
+.game-play .snake {
+    background: green;
 }
 
-.food {
-    background: red !important;
+.game-play .food {
+    background: red;
     border-radius: 50%;
 }
 

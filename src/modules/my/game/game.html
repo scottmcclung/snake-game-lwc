@@ -1,9 +1,7 @@
 <template>
     <div class="header slds-var-p-around_medium">
         <div class="slds-grid">
-            <div class="slds-col slds-size_1-of-3">
-                Score: {score}
-            </div>
+            <div class="slds-col slds-size_1-of-3">Score: {score}</div>
             <div class="slds-col slds-size_1-of-3 slds-text-align_center">
                 Speed: {displaySpeed}x
             </div>
@@ -14,7 +12,7 @@
     </div>
     <div class="game-container">
         <div class="game-play">
-            <template for:each={gameBlocks} for:item="block">
+            <template for:each={gameBoard} for:item="block">
                 <div
                     class={block.class}
                     data-reference={block.id}

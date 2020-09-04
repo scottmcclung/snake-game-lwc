@@ -6,7 +6,8 @@ export default class Game extends LightningElement {
 
     blockSize = 20;
 
-    @track gameBlocks = [];
+    gameBlocks = new Map();
+    @track gameBoard = [];
 
     renderComplete = false;
 
@@ -26,6 +27,10 @@ export default class Game extends LightningElement {
 
     speed = 1;
     intervalObj;
+
+    renderGameBoard() {
+        this.gameBoard = Array.from(this.gameBlocks.values());
+    }
 
     connectedCallback() {
         this.highScore = localStorage.getItem('lwc_snake_high')
@@ -51,15 +56,11 @@ export default class Game extends LightningElement {
     }
 
     move() {
+        const headCoords = `${this.xHead}:${this.yHead}`;
         let lastElement = this.tail[this.tail.length - 1];
-        if (lastElement !== `${this.xHead}:${this.yHead}`) {
-            this.tail.push(`${this.xHead}:${this.yHead}`);
-            let removedElement = this.tail.shift();
-            let curPosIndex = this.gameBlocks.findIndex(
-                (x) => x.id === removedElement
-            );
-            this.gameBlocks[curPosIndex].snake = false;
-            this.gameBlocks[curPosIndex].class = '';
+        if (lastElement !== headCoords) {
+            this.tail.push(headCoords);
+            this.setGameBlock(this.tail.shift(), { snake: false, class: '' });
         }
 
         this.xHead += this.xSpeed;
@@ -81,26 +82,24 @@ export default class Game extends LightningElement {
             this.yHead = this.yMax - 1;
         }
 
-        if (this.tail.includes(`${this.xHead}:${this.yHead}`)) {
+        const newHeadCoords = `${this.xHead}:${this.yHead}`;
+        if (this.tail.includes(newHeadCoords)) {
             this.exitGame();
-        } else {
-            let newPosIndex = this.gameBlocks.findIndex(
-                (x) => x.id === `${this.xHead}:${this.yHead}`
-            );
-            this.gameBlocks[newPosIndex].snake = true;
-            this.gameBlocks[newPosIndex].class = 'snake';
+            return;
+        }
 
-            if (this.gameBlocks[newPosIndex].food) {
-                this.score++;
-                if (this.score > this.highScore) {
-                    this.highScore = this.score;
-                    localStorage.setItem('lwc_snake_high', this.highScore);
-                }
-                this.addSpeed();
-                this.tail.push(`${this.xHead}:${this.yHead}`);
-                this.gameBlocks[newPosIndex].food = false;
-                this.generateFood();
+        this.setGameBlock(newHeadCoords, { snake: true, class: 'snake' });
+
+        if (this.gameBlocks.get(newHeadCoords).food) {
+            this.score++;
+            if (this.score > this.highScore) {
+                this.highScore = this.score;
+                localStorage.setItem('lwc_snake_high', this.highScore);
             }
+            this.addSpeed();
+            this.tail.push(newHeadCoords);
+            this.setGameBlock(newHeadCoords, { food: false });
+            this.generateFood();
         }
     }
 
@@ -133,50 +132,42 @@ export default class Game extends LightningElement {
     generateFood() {
         let xFood = Math.floor(Math.random() * (this.xMax - 1));
         let yFood = Math.floor(Math.random() * (this.yMax - 1));
+        const foodCoords = `${xFood}:${yFood}`;
 
-        if (!this.tail.includes(`${xFood}:${yFood}`)) {
-            let foodPosIndex = this.gameBlocks.findIndex(
-                (x) => x.id === `${xFood}:${yFood}`
-            );
-            this.gameBlocks[foodPosIndex].food = true;
-            this.gameBlocks[foodPosIndex].class = 'food';
-        } else {
-            this.generateFood();
+        if (this.tail.includes(foodCoords)) {
+            return this.generateFood();
         }
+        this.setGameBlock(foodCoords, { food: true, class: 'food' });
     }
 
     renderGameBlocks() {
-        let eWidth = this.template.querySelector('.game-container').clientWidth;
-        let eHeight = this.template.querySelector('.game-container')
-            .clientHeight;
+        const container = this.template.querySelector('.game-container');
+        const eWidth = container.clientWidth;
+        const eHeight = container.clientHeight;
 
         this.xMax = Math.floor(eWidth / this.blockSize);
         this.yMax = Math.floor(eHeight / this.blockSize);
 
-        let tmpBlocks = [];
+        this.gameBlocks = new Map();
 
         for (let y = 0; y < this.yMax; y++) {
             for (let x = 0; x < this.xMax; x++) {
-                let obj;
-                if (x === 0 && y === 0) {
-                    obj = {
-                        id: `${x}:${y}`,
+                const coords = `${x}:${y}`;
+                this.setGameBlock(coords, {
+                    id: coords,
+                    snake: false,
+                    food: false,
+                    class: ''
+                });
+
+                if (coords === '0:0') {
+                    this.setGameBlock(coords, {
                         snake: true,
-                        food: false,
                         class: 'snake'
-                    };
-                } else {
-                    obj = {
-                        id: `${x}:${y}`,
-                        snake: false,
-                        food: false,
-                        class: ''
-                    };
+                    });
                 }
-                tmpBlocks.push(obj);
             }
         }
-        this.gameBlocks = tmpBlocks;
     }
 
     renderedCallback() {
@@ -209,5 +200,11 @@ export default class Game extends LightningElement {
         this.showOverlay = true;
         this.gameOver = true;
         clearInterval(this.intervalObj);
+    }
+
+    setGameBlock(coords, args = {}) {
+        const gameBlock = this.gameBlocks.get(coords) || {};
+        this.gameBlocks.set(coords, Object.assign({}, gameBlock, args));
+        this.renderGameBoard();
     }
 }
